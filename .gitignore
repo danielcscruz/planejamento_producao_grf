@@ -1,0 +1,6 @@
+*.xlsx
+*.xlsx#
+.DS_Store
+*.pyc
+myenv
+__pycache__
