@@ -55,8 +55,5 @@ def main():
         
         criar_novo_plano(df_formatado, inicio_data)
 
-
-
-
 if __name__ == "__main__":
     main()

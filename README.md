@@ -1,6 +1,6 @@
-# 🖨️ Planejamento de Produção para Gráfica
+# 🖨️ Planejamento de Produção
 
-Este projeto tem como objetivo auxiliar no planejamento de produção para gráfica, utilizando uma planilha base personalizada e Python para processar dados do fluxo produtivo.
+Este projeto tem como objetivo auxiliar no planejamento de produção, utilizando uma planilha base personalizada e Python para processar dados do fluxo produtivo.
 
 ## 📁 Estrutura do Projeto
 
