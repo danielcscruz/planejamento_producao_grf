@@ -6,8 +6,8 @@ from automation.priority_handler import definir_prioridade
 from automation.create_plan import criar_novo_plano
 from automation.add_row import adicionar_nova_linha
 from tabulate import tabulate
-from automation.action_selector import escolher_acao  # Importando a função de escolha de ação
-from utils.start_date_validator import validar_data_input  # Importando a validação de data
+from automation.action_selector import escolher_acao  
+from automation.start_date_validator import validar_data_input  
 
 
 def main():
