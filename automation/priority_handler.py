@@ -4,17 +4,31 @@ import pandas as pd
 
 def definir_prioridade(df):
     escolha = inquirer.select(
-        message="\nComo você quer definir a prioridade da produção?\n",
+        message="Como você quer definir a prioridade da produção?",
         choices=[
-            "Ordenar automaticamente por prazo de entrega (crescente)",
+            "Não priorizar",
+            "Priorizar por prazo de entrega",
+            "Priorizar por quantidade de produção",
             "Definir manualmente a ordem de produção"
         ]
     ).execute()
 
-    if escolha.startswith("Ordenar"):
+    if escolha == "Não priorizar":
+        # Retorna a tabela sem nenhuma modificação
+        return df.reset_index(drop=True)
+
+    elif escolha == "Priorizar por prazo de entrega":
+        # Ordena por "ENTREGA" em ordem decrescente
         df_ordenado = df.sort_values(by="ENTREGA", ascending=True).reset_index(drop=True)
         return df_ordenado
-    else:
+
+    elif escolha == "Priorizar por quantidade de produção":
+        # Ordena por "QUANTIDADE" em ordem decrescente
+        df_ordenado = df.sort_values(by="QUANTIDADE", ascending=True).reset_index(drop=True)
+        return df_ordenado
+
+    elif escolha == "Definir manualmente a ordem de produção":
+        # Chama a função para definir a ordem manualmente
         return definir_ordem_manual(df)
 
 
