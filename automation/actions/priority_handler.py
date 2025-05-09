@@ -1,6 +1,4 @@
 from InquirerPy import inquirer
-import pandas as pd
-
 
 def definir_prioridade(df):
     escolha = inquirer.select(

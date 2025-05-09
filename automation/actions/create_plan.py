@@ -1,6 +1,6 @@
 from openpyxl import load_workbook
 import pandas as pd
-from automation.fill_production import preencher_producao  
+from automation.core.production_planner import preencher_producao  
 
 def criar_novo_plano(df_priorizado: pd.DataFrame):
     total = len(df_priorizado)
@@ -46,7 +46,18 @@ def criar_novo_plano(df_priorizado: pd.DataFrame):
             salvar = (index == total - 1)  # só salva no último
             print(f"[Linha {index}] Iniciando preenchimento para tipo de corte: {corte}")
 
-            primeiro_dia, ultimo_dia, delay = preencher_producao(ws, quantidade=quantidade, setor="PCP", linha=linha, calendario_path="data/_CALENDARIO.csv", planilha_path=arquivo_path, workbook=wb, corte=corte, salvar=salvar)
+            primeiro_dia, ultimo_dia, delay = preencher_producao(
+                ws=ws, 
+                df_priorizado=df_priorizado, 
+                quantidade=quantidade, 
+                setor="PCP", 
+                linha=linha, 
+                calendario_path="data/_CALENDARIO.csv", 
+                planilha_path=arquivo_path, 
+                workbook=wb, 
+                corte=corte, 
+                salvar=salvar
+            )
 
             # Padroniza a data para o formato DD/MM/AAAA
             if ultimo_dia:
@@ -70,4 +81,3 @@ def criar_novo_plano(df_priorizado: pd.DataFrame):
 
 
     return df_priorizado
-

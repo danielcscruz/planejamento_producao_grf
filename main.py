@@ -1,14 +1,11 @@
 import pyfiglet
-from automation.file_selector import escolher_arquivo_excel
-from automation.table_renderer import processar_tabela
-from automation.cut_selector import selecionar_tipos_de_corte
-from automation.priority_handler import definir_prioridade
-from automation.create_plan import criar_novo_plano
-from automation.add_row import adicionar_nova_linha
-from automation.report_validator import validar_prazo
 from tabulate import tabulate
-from automation.action_selector import escolher_acao
 from InquirerPy import inquirer
+import pandas as pd
+
+from automation import gerar_relatorio_arquivo, criar_novo_plano, definir_ordem_manual, definir_prioridade, escolher_acao, escolher_arquivo_excel, preencher_producao, processar_tabela, selecionar_tipos_de_corte, validar_data_input, validar_prazo, escolher_arquivo_exportar
+from automation.core.constants import DEFAULT_CONFIG_PATH
+
 import os
 import sys  # Para fechar o script com segurança
 
@@ -16,21 +13,79 @@ import sys  # Para fechar o script com segurança
 def main():
     # Limpar a tela do console
     os.system('cls' if os.name == 'nt' else 'clear')
+    f = pyfiglet.Figlet(font="basic", width=80)
+    print('\n')
+    print(f.renderText('plano   de producao'))
 
     while True:
         # Pergunta o que o usuário deseja fazer
-        f = pyfiglet.Figlet(font="basic", width=80)
-        print('\n')
-        print(f.renderText('plano   de producao'))
+        # os.system('cls' if os.name == 'nt' else 'clear')
+
         acao = escolher_acao()
 
         if acao == "🚪: Sair":
             print("\n👋 Saindo do programa. Até logo!")
             sys.exit()  # Fecha o script com segurança
+        
+        if acao == "📊: Exportar Relatórios":
+            arquivo_exportar = escolher_arquivo_exportar()
+
+            if arquivo_exportar == None:
+                continue
+            
+            gerar_relatorio_arquivo(arquivo_exportar)
+
+        if acao == "⚙️ : Configurações ":
+            try:
+                # Lê o arquivo CSV usando pandas
+                config_df = pd.read_csv(DEFAULT_CONFIG_PATH, encoding='utf-16')
+                colunas = ["PARAMETRO", "VALOR", "UNIDADE", "DESCRICAO"]
+                print(tabulate(config_df, headers=colunas, tablefmt="fancy_grid"))
+                # Cria as opções para o menu
+                opcoes = [
+                    f"{row['PARAMETRO']} | {row['VALOR']} | {row['UNIDADE']} | {row['DESCRICAO']}"
+                    for _, row in config_df.iterrows()
+                ]
+                opcoes.append("🔙 Voltar para o menu inicial")
+
+                # Exibe o menu para o usuário
+                escolha = inquirer.select(
+                    message="Escolha qual parametro você deseja alterar:",
+                    choices=opcoes,
+                ).execute()
+                
+                if escolha == "🔙 Voltar para o menu inicial":
+                    print("\n🔙 Retornando ao menu inicial...\n")
+                    continue  # Volta para o início do loop principal
+
+                # Extrai o parâmetro escolhido
+                parametro_escolhido = escolha.split(" | ")[0]
+
+                # Solicita um novo valor para o parâmetro
+                while True:
+                    try:
+                        novo_valor = int(input(f"Digite o novo valor inteiro para {parametro_escolhido}: "))
+                        break  # Sai do loop se o valor for válido
+                    except ValueError:
+                        print("❌ Entrada inválida. Por favor, insira um número inteiro.")
+
+                # Atualiza o valor no DataFrame
+                config_df.loc[config_df['PARAMETRO'] == parametro_escolhido, 'VALOR'] = novo_valor
+
+                # Salva as alterações de volta no arquivo CSV
+                config_df.to_csv(DEFAULT_CONFIG_PATH, index=False, encoding='utf-16')
+                print(f"✅ O valor de {parametro_escolhido} foi atualizado para {novo_valor} com sucesso!")
+
+            except Exception as e:
+                print(f"Erro inesperado ao carregar o arquivo de configuração: {e}")
 
         if acao == "📥: Carregar Pedidos":
             # Gerar um novo plano
             arquivo = escolher_arquivo_excel()
+
+            if arquivo == None:
+                continue
+
             df_formatado, _ = processar_tabela(arquivo)
 
             tipos_corte = selecionar_tipos_de_corte(df_formatado)
