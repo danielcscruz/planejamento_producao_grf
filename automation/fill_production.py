@@ -1,6 +1,8 @@
 import pandas as pd
 from openpyxl.worksheet.worksheet import Worksheet
 from datetime import datetime, timedelta
+import os
+from pathlib import Path
 
 SETOR_ORDEM = [
     'PCP', 'Separação MP', 'Corte manual', 'Impressão',
@@ -9,7 +11,7 @@ SETOR_ORDEM = [
 
 def obter_proximos_dias_uteis(data_inicio, dias_necessarios, calendario_path='data/_CALENDARIO.csv'):
     """
-    Obtém uma lista de dias úteis a partir do próximo dia útil após a data de início.
+    Obtém uma lista de dias úteis a partir da data fornecida (inclusive).
     """
     print(f"DEBUG - Buscando {dias_necessarios} dias úteis a partir de {data_inicio}")
     df_cal = pd.read_csv(calendario_path)
@@ -25,11 +27,11 @@ def obter_proximos_dias_uteis(data_inicio, dias_necessarios, calendario_path='da
     if isinstance(data_inicio, str):
         data_inicio = datetime.strptime(data_inicio, "%d/%m/%Y")
     
-    # Avança para o próximo dia após a data de início
-    data_proxima = data_inicio + timedelta(days=1)
-    print(f"DEBUG - Próxima data após data_inicio: {data_proxima}")
+    # Usa a data exata fornecida
+    data_proxima = data_inicio
+    print(f"DEBUG - Data para buscar próximo dia útil: {data_proxima}")
     
-    # Encontra a posição do próximo dia útil após a data de início
+    # Encontra a posição do próximo dia útil a partir da data fornecida (inclusive)
     proxima_data_util_idx = 0
     encontrou = False
     for i, data in enumerate(dias_uteis):
@@ -90,13 +92,50 @@ def encontrar_coluna_por_data(ws, data):
     print(f"DEBUG - ALERTA: Data {data_str} não encontrada em nenhuma coluna da planilha!")
     return None
 
+def salvar_nova_versao(caminho_original, workbook):
+    """
+    Salva a planilha em uma nova versão na pasta exp/
+    """
+    try:
+        # Garantir que a pasta exp/ existe
+        pasta_exp = Path("exp")
+        pasta_exp.mkdir(exist_ok=True)
+        
+        # Obter o nome do arquivo original
+        nome_arquivo = Path(caminho_original).name
+        base_nome = Path(caminho_original).stem
+        extensao = Path(caminho_original).suffix
+        
+        # Gerar um nome de arquivo com timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        novo_nome = f"{base_nome}_{timestamp}{extensao}"
+        novo_caminho = pasta_exp / novo_nome
+        
+        # Salvar a planilha no novo caminho
+        workbook.save(str(novo_caminho))
+        print(f"DEBUG - Planilha salva como nova versão: {novo_caminho}")
+        return str(novo_caminho)
+    except Exception as e:
+        print(f"DEBUG - ERRO ao salvar nova versão da planilha: {e}")
+        return None
+
 def preencher_producao(ws: Worksheet, quantidade: int, setor: str, linha: int, 
-                      data_inicio=None, calendario_path='data/_CALENDARIO.csv'):
+                    corte, data_inicio=None, calendario_path='data/_CALENDARIO.csv', 
+                    planilha_path=None, workbook=None, salvar: bool = True):
     """
     Preenche a produção a partir do setor especificado, propagando para os demais setores na ordem.
-    """
-    print(f"\nDEBUG - Iniciando planejamento: quantidade={quantidade}, setor={setor}, linha={linha}")
     
+    Args:
+        ws: Worksheet do openpyxl
+        quantidade: Quantidade a ser produzida
+        setor: Setor inicial
+        linha: Linha na planilha
+        data_inicio: Data de início (opcional)
+        calendario_path: Caminho para o arquivo de calendário
+        planilha_path: Caminho para o arquivo da planilha (para salvar nova versão)
+        workbook: Objeto workbook do openpyxl (necessário para salvar)
+    """
+    print(f"\nDEBUG - Iniciando planejamento: quantidade={quantidade}, setor={setor}, linha={linha}")    
     # Verifica se o arquivo de calendário existe
     print(f"DEBUG - Verificando calendário: {calendario_path}")
     try:
@@ -128,46 +167,48 @@ def preencher_producao(ws: Worksheet, quantidade: int, setor: str, linha: int,
     
     # Para rastrear a data atual de processamento para cada setor
     data_atual = data_inicio
+    ultimo_dia_usado = None
     print(f"DEBUG - Data inicial para processamento: {data_atual}")
     
     # Processa cada setor na ordem
     for i, setor_nome in enumerate(setores_processar):
         print(f"\nDEBUG - Processando setor: {setor_nome} (índice {i})")
         
+        print(f"\nDEBUG - Comparando corte e setor: {setor_nome} e {corte}")
+        if setor_nome == 'Corte manual' and corte == 'Corte laser':
+            print(f"\nDEBUG - Break: {setor_nome} e {corte}")
+            continue
+        if setor_nome == 'Corte laser' and corte == 'Corte manual':
+            print(f"\nDEBUG - Break: {setor_nome} e {corte}")
+            continue
+        
         # Se não for o primeiro setor, avança para o próximo dia útil
         if i > 0:
-            print(f"DEBUG - Avançando para o próximo dia útil após {data_atual}")
+            print(f"DEBUG - Processando próximo setor, avançando para o próximo dia útil")
             
-            # Avança para o próximo dia útil - CORRIGIDO PARA EVITAR LOOP INFINITO
-            data_atual += timedelta(days=1)
-            dias_avancados = 1
-            ultima_data_verificada = None
+            # CORREÇÃO: Garantir que avançamos pelo menos um dia para o próximo setor
+            # Avança um dia para garantir que estamos no dia seguinte
+            if ultimo_dia_usado:
+                # Use o último dia que foi realmente usado pelo setor anterior
+                data_proxima = ultimo_dia_usado + timedelta(days=1)
+            else:
+                # Fallback se não tivermos registro do último dia usado
+                data_proxima = data_atual + timedelta(days=1)
+                
+            print(f"DEBUG - Avançando para o dia seguinte: {data_proxima}")
             
-            while True:
-                # Verifica se estamos verificando a mesma data repetidamente (sinal de loop)
-                if ultima_data_verificada == data_atual.date():
-                    print(f"DEBUG - ALERTA: Detectado possível loop na data {data_atual.date()}")
-                    # Avança mais um dia para quebrar o padrão
-                    data_atual += timedelta(days=1)
-                
-                ultima_data_verificada = data_atual.date()
-                
-                matching_rows = df_cal[(df_cal['DATA'].dt.date == data_atual.date())]
-                if not matching_rows.empty:
-                    print(f"DEBUG - Verificando data {data_atual.date()}: valor={matching_rows['VALOR'].iloc[0]}")
-                    if matching_rows['VALOR'].iloc[0] == 'UTIL':
-                        print(f"DEBUG - Dia útil encontrado: {data_atual.date()}")
-                        break
-                else:
-                    print(f"DEBUG - Data {data_atual.date()} não encontrada no calendário!")
-                
-                data_atual += timedelta(days=1)
-                dias_avancados += 1
-                if dias_avancados > 30:  # Segurança para evitar loop infinito
-                    print("DEBUG - ALERTA: Mais de 30 dias avançados sem encontrar dia útil! Interrompendo.")
-                    break
-            
-            print(f"DEBUG - Novo dia útil para processamento: {data_atual}")
+            # Agora buscamos o próximo dia útil a partir desse dia seguinte
+            proximos_dias = obter_proximos_dias_uteis(data_proxima, 1, calendario_path)
+            if proximos_dias:
+                data_atual = proximos_dias[0]
+                print(f"DEBUG - Próximo dia útil encontrado: {data_atual}")
+            else:
+                print(f"DEBUG - ALERTA: Nenhum dia útil encontrado após {data_proxima}!")
+                # Avança um dia como fallback
+                data_atual = data_proxima
+        
+        # Resetamos o último dia usado para este novo setor
+        ultimo_dia_usado = None
         
         # Calcula a linha do setor atual (linha do pedido + offset do setor)
         linha_setor = linha + SETOR_ORDEM.index(setor_nome) + 1
@@ -178,66 +219,115 @@ def preencher_producao(ws: Worksheet, quantidade: int, setor: str, linha: int,
         try:
             valor_limite_cell = ws.cell(row=linha_limite, column=5).value
             print(f"DEBUG - Célula de limite na linha {linha_limite}, coluna 5: {valor_limite_cell}")
-            valor_limite = int(valor_limite_cell) if valor_limite_cell is not None else 0
+            valor_limite_max = int(valor_limite_cell) if valor_limite_cell is not None else 0
         except (ValueError, TypeError) as e:
             print(f"DEBUG - Erro ao converter limite: {e}")
-            valor_limite = 0
+            valor_limite_max = 0
         
-        print(f"DEBUG - Limite diário para o setor {setor_nome}: {valor_limite}")
+        print(f"DEBUG - >> Limite máximo diário para o setor {setor_nome}: {valor_limite_max }")
         
         qtd_restante = quantidade
-        dias_necessarios = 0
         
-        # Calcula quantos dias serão necessários para processar toda a quantidade
-        if valor_limite > 0:
-            dias_necessarios = (qtd_restante + valor_limite - 1) // valor_limite  # Arredonda para cima
-        else:
-            dias_necessarios = 1  # Se não há limite, assume que tudo pode ser feito em um dia
-        
-        print(f"DEBUG - Dias necessários para processar {qtd_restante} unidades: {dias_necessarios}")
-        
-        # Obtém os próximos dias úteis necessários
-        dias_uteis = obter_proximos_dias_uteis(data_atual, dias_necessarios, calendario_path)
-        
-        if not dias_uteis:
-            print(f"DEBUG - ALERTA: Nenhum dia útil encontrado para o setor {setor_nome}!")
-            continue
-        
-        print(f"DEBUG - Distribuindo produção para o setor {setor_nome}")
-        # Distribui a produção pelos dias úteis
-        for dia_util in dias_uteis:
-            # Encontra a coluna correspondente à data
-            col = encontrar_coluna_por_data(ws, dia_util)
+        # CORREÇÃO: Enquanto houver quantidade restante, continue processando o setor atual
+        while qtd_restante > 0:
+            # Calcula quantos dias serão necessários para processar toda a quantidade restante
+            if valor_limite_max > 0:
+                dias_necessarios = (qtd_restante + valor_limite_max - 1) // valor_limite_max  # Arredonda para cima
+            else:
+                dias_necessarios = 1  # Se não há limite, assume que tudo pode ser feito em um dia
             
-            if col is None:
-                print(f"DEBUG - Pulando dia {dia_util} pois não foi encontrado na planilha")
-                continue
+            # Limita o número de dias buscados por vez para evitar carregar toda a tabela
+            dias_por_iteracao = min(dias_necessarios, 30)  # Busca no máximo 30 dias por vez
             
-            # Determina quanto produzir neste dia
-            producao_dia = min(valor_limite, qtd_restante) if valor_limite > 0 else qtd_restante
+            print(f"DEBUG - Buscando {dias_por_iteracao} dias úteis para processar {qtd_restante} unidades")
             
-            # Registra a produção na planilha
-            print(f"DEBUG - Preenchendo: linha={linha_setor}, coluna={col}, valor={producao_dia}")
-            current_value = ws.cell(row=linha_setor, column=col).value
-            print(f"DEBUG - Valor atual na célula: {current_value}")
+            # Obtém os próximos dias úteis necessários
+            dias_uteis = obter_proximos_dias_uteis(data_atual, dias_por_iteracao, calendario_path)
             
-            try:
-                ws.cell(row=linha_setor, column=col, value=producao_dia)
-                print(f"DEBUG - Produção registrada com sucesso: {producao_dia} unidades")
-            except Exception as e:
-                print(f"DEBUG - ERRO ao registrar produção: {e}")
-            
-            qtd_restante -= producao_dia
-            print(f"DEBUG - Quantidade restante: {qtd_restante}")
-            
-            # Se toda a quantidade foi distribuída, para
-            if qtd_restante <= 0:
-                print(f"DEBUG - Toda a quantidade foi distribuída para o setor {setor_nome}")
+            if not dias_uteis:
+                print(f"DEBUG - ALERTA: Nenhum dia útil encontrado para o setor {setor_nome}!")
+                # CORREÇÃO: Se não encontrar dias úteis, saímos do loop deste setor e continuamos
+                # para evitar loop infinito, mas com um alerta claro
+                print(f"DEBUG - ERRO CRÍTICO: Não foi possível alocar {qtd_restante} unidades para o setor {setor_nome}!")
                 break
-        
-        # Atualiza a data atual para o último dia utilizado neste setor
-        if dias_uteis:
-            data_atual = dias_uteis[-1]
-            print(f"DEBUG - Data atual atualizada para o último dia utilizado: {data_atual}")
+            
+            print(f"DEBUG - Distribuindo produção para o setor {setor_nome}")
+            # Distribui a produção pelos dias úteis
+            for dia_util in dias_uteis:
+                # Encontra a coluna correspondente à data
+                col = encontrar_coluna_por_data(ws, dia_util)
+                
+                if col is None:
+                    print(f"DEBUG - Pulando dia {dia_util} pois não foi encontrado na planilha")
+                    continue
+                
+                # Debugging: Print the values being read from the cells
+                valor_planejado = 0  # Initialize the variable
+                for row in range(12, linha_setor):
+                    cell_value = ws.cell(row=row, column=col).value
+                    setor_cell_value = ws.cell(row=row, column=7).value  # Coluna G é a 7ª coluna
+                    if setor_cell_value == setor_nome:
+                        valor_planejado += int(cell_value or 0)  # Calculate the sum of the values
+            
+                print(f"DEBUG - >>>>Soma calculada para valor_planejado: {valor_planejado}")
+                print(f"DEBUG - >> Valor já planejado até a linha {linha_setor}, coluna {col}: {valor_planejado}")
+
+                # Calcula o limite disponível para o dia atual
+                valor_limite = max(0, valor_limite_max - valor_planejado)
+                print(f"DEBUG - Limite diário disponível para o setor {setor_nome}: {valor_limite}")
+
+                # Determina quanto produzir neste dia
+                # producao_dia = min(valor_limite, qtd_restante) if valor_limite > 0 else qtd_restante
+                
+                if qtd_restante > valor_limite:
+                    producao_dia = valor_limite
+                else:
+                    producao_dia = qtd_restante
+
+                # Registra a produção na planilha
+                print(f"DEBUG - Preenchendo: linha={linha_setor}, coluna={col}, valor={producao_dia}")
+                current_value = ws.cell(row=linha_setor, column=col).value
+                print(f"DEBUG - Valor atual na célula: {current_value}")
+                
+                try:
+                    ws.cell(row=linha_setor, column=col, value=producao_dia)
+                    print(f"DEBUG - Produção registrada com sucesso: {producao_dia} unidades")
+                    
+                    # Registra este dia como o último usado pelo setor atual
+                    ultimo_dia_usado = dia_util
+                    
+                except Exception as e:
+                    print(f"DEBUG - ERRO ao registrar produção: {e}")
+                
+                qtd_restante -= producao_dia
+                print(f"DEBUG - Quantidade restante: {qtd_restante}")
+                
+                # Se toda a quantidade foi distribuída, para
+                if qtd_restante <= 0:
+                    print(f"DEBUG - Toda a quantidade foi distribuída para o setor {setor_nome}")
+                    break
+            
+            # CORREÇÃO: Se ainda houver quantidade restante, avança a data atual para continuar
+            # buscando mais dias úteis a partir do último dia utilizado + 1
+            if qtd_restante > 0:
+                if ultimo_dia_usado:
+                    data_atual = ultimo_dia_usado + timedelta(days=1)
+                else:
+                    data_atual = dias_uteis[-1] + timedelta(days=1)
+                print(f"DEBUG - Ainda restam {qtd_restante} unidades. Avançando para {data_atual} para buscar mais dias úteis.")
+            
+            # CORREÇÃO: Se foram processados todos os dias disponíveis e ainda há qtd_restante,
+            # mas não conseguimos alocar nada (porque não existem colunas na planilha para essas datas),
+            # devemos sair do loop para evitar um loop infinito
+            if all(encontrar_coluna_por_data(ws, dia) is None for dia in dias_uteis) and len(dias_uteis) > 0:
+                print(f"DEBUG - ALERTA: Nenhuma das datas obtidas está disponível na planilha. Saindo do loop.")
+                print(f"DEBUG - ERRO CRÍTICO: Não foi possível alocar {qtd_restante} unidades para o setor {setor_nome}!")
+                break
     
     print("DEBUG - Planejamento de produção concluído")
+    print(f"{corte}")
+    
+    # Salvar a planilha em uma nova versão se um caminho e o workbook foram fornecidos
+    if planilha_path and workbook:
+        if salvar:
+            salvar_nova_versao(planilha_path, workbook)

@@ -17,14 +17,15 @@ def main():
     print(f.renderText('plano   de producao'))
     acao = escolher_acao()
 
-    if acao == "Adicionar um Pedido ao Plano de Produção":
+    if acao == "➕: Adicionar um Pedido":
+
         # Lógica para atualizar um plano de produção
         arquivo = escolher_arquivo_excel()
         df_formatado, _ = processar_tabela(arquivo)
         adicionar_nova_linha(arquivo)
         df_formatado, _ = processar_tabela(arquivo)
 
-    elif acao == "Gerar planos dos Setores":
+    if acao == "📥: Carregar Pedidos":
         # Gerar um novo plano
         arquivo = escolher_arquivo_excel()
         df_formatado, _ = processar_tabela(arquivo)
@@ -44,16 +45,16 @@ def main():
         print("\n📋 Tabela final com prioridade:\n")
         print(tabulate(df_priorizado, headers='keys', tablefmt='grid', showindex=False))
 
-        while True:
-            try:
-                inicio_data_str = input(f"Digite a data de inicio do Plano de Produção no formato DD/MM/AAAA: ")
-                inicio_data = validar_data_input(inicio_data_str)
-                print(f"✔️ Data de inicio do Plano de Produção: {inicio_data.strftime('%d/%m/%Y')}")
-                break
-            except ValueError as e:
-                print(e)  # Exibe o erro se a data for inválida ou no passado
+        # while True:
+        #     try:
+        #         inicio_data_str = input(f"\nDigite a data de inicio do Plano de Produção no formato DD/MM/AAAA: \n")
+        #         inicio_data = validar_data_input(inicio_data_str)
+        #         print(f"\n✔️ Data de inicio do Plano de Produção: {inicio_data.strftime('%d/%m/%Y')}\n")
+        #         break
+        #     except ValueError as e:
+        #         print(e)  # Exibe o erro se a data for inválida ou no passado
         
-        criar_novo_plano(df_formatado, inicio_data)
+        criar_novo_plano(df_priorizado)
 
 if __name__ == "__main__":
     main()

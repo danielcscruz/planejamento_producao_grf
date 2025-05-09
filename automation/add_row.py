@@ -44,8 +44,8 @@ def adicionar_nova_linha(arquivo_path):
     # 🔽 Seleção do tipo de corte usando InquirerPy
     tipo_corte = inquirer.select(
         message="🛠️ Selecione o tipo de corte:",
-        choices=["Corte Manual", "Corte a Laser"],
-        default="Corte Manual",
+        choices=["Corte manual", "Corte laser"],
+        default="Corte manual",
     ).execute()
 
     # Preenche os dados na planilha
@@ -55,7 +55,9 @@ def adicionar_nova_linha(arquivo_path):
     ws.cell(row=linha, column=4, value=produto)
     ws.cell(row=linha, column=5, value=quantidade)
 
-    preencher_producao(ws, quantidade=quantidade, setor='PCP', linha=linha)
+    # preencher_producao(ws, quantidade=quantidade, setor='PCP', linha=linha)
+    preencher_producao(ws, quantidade=quantidade, setor="PCP", linha=linha, calendario_path="data/_CALENDARIO.csv", planilha_path=arquivo_path, workbook=wb, corte=tipo_corte)
+
 
 
     wb.save(arquivo_path)

@@ -1,50 +1,45 @@
-import os
-import openpyxl
+from openpyxl import load_workbook
 import pandas as pd
-from openpyxl import Workbook
-from datetime import datetime
+from automation.fill_production import preencher_producao  
 
+def criar_novo_plano(df_priorizado: pd.DataFrame):
+    total = len(df_priorizado)
+    arquivo_path = "model/planejamento.xlsx"
 
-def criar_novo_plano(df_formatado, inicio_data):
-    # Criando nova planilha
-    wb = Workbook()
+    wb = load_workbook(arquivo_path)
     ws = wb.active
-    ws.title = "Plano de Produção"
 
-    # Adicionando títulos principais
-    colunas = ['PEDIDO', 'ENTREGA', 'CLIENTE', 'PRODUTO', 'QUANTIDADE']
-    for i, col in enumerate(colunas, start=1):
-        ws.cell(row=1, column=i, value=col)
+    for index, row in df_priorizado.iterrows():
+        linha = 12
+        while ws.cell(row=linha, column=1).value:
+            linha += 1
 
-    # Colunas adicionais
-    ws.cell(row=1, column=6, value='RESTA')
-    ws.cell(row=1, column=7, value='SETOR')
+        # Pegar valores da tabela
+        pedido = row.get("PEDIDO")
+        entrega = row.get("ENTREGA")
+        cliente = row.get("CLIENTE")
+        produto = row.get("PRODUTO")
+        quantidade= row.get("QUANTIDADE")
+        corte = row.get("TIPO DE CORTE")
+        
+        # Preenche os dados na planilha
+        ws.cell(row=linha, column=1, value=pedido)
+        ws.cell(row=linha, column=2, value=entrega)
+        ws.cell(row=linha, column=3, value=cliente)
+        ws.cell(row=linha, column=4, value=produto)
+        ws.cell(row=linha, column=5, value=quantidade)
 
-    # Adicionando os dados a partir da linha 12
-    linha_inicio = 12
-    for i, row in df_formatado.iterrows():
-        for j, col in enumerate(colunas, start=1):
-            ws.cell(row=linha_inicio, column=j, value=row[col])
-        linha_inicio += 1
 
-    # 🔽 Adicionando calendário
-    calendario_path = os.path.join(os.path.dirname(__file__), "..", "data", "_CALENDARIO.csv")
-    calendario_path = os.path.abspath(calendario_path)
+        if not corte:
+            print(f"[Linha {index}] TIPO DE CORTE não especificado. Pulando.")
+            continue
 
-    if os.path.exists(calendario_path):
-        calendario_df = pd.read_csv(calendario_path, sep=None, engine="python")
-        for idx, (_, linha) in enumerate(calendario_df.iterrows(), start=8):  # Coluna H = 8
-            semana_abreviada = linha["SEMANA"][:3]  # Ex: "Qua" para "Quarta-feira"
-            ws.cell(row=1, column=idx, value=semana_abreviada)
-            ws.cell(row=2, column=idx, value=linha["FORMATADO"])
-    else:
-        print(f"⚠️ Arquivo de calendário '{calendario_path}' não encontrado. Parte do calendário será ignorada.")
+        try:
+            salvar = (index == total - 1)  # só salva no último
+            print(f"[Linha {index}] Iniciando preenchimento para tipo de corte: {corte}")
 
-    # Criando pasta e salvando
-    os.makedirs("exp", exist_ok=True)
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    arquivo_destino = os.path.join("exp", f"Plano_Producao_{timestamp}.xlsx")
-    wb.save(arquivo_destino)
+            preencher_producao(ws, quantidade=quantidade, setor="PCP", linha=linha, calendario_path="data/_CALENDARIO.csv", planilha_path=arquivo_path, workbook=wb, corte=corte, salvar=salvar)
 
-    print(f"📄 Novo plano de produção gerado: {arquivo_destino}")
-    return arquivo_destino
+            print(f"[Linha {index}] Preenchimento concluído.\n")
+        except Exception as e:
+            print(f"[Linha {index}] Erro ao preencher produção: {e}")

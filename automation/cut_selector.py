@@ -4,10 +4,10 @@ def selecionar_tipos_de_corte(df_formatado):
     respostas = {}
     for _, row in df_formatado.iterrows():
         chave = row["PEDIDO"]
-        descricao = f"{row['PEDIDO']} - {row['CLIENTE']} - {row['PRODUTO']}"
+        descricao = f"\n{row['PEDIDO']} - {row['CLIENTE']} - {row['PRODUTO']}\n"
         tipo = inquirer.select(
-            message=f"Escolha o tipo de corte para:\n{descricao}",
-            choices=["Corte manual", "Corte a laser"],
+            message=f"\nEscolha o tipo de corte para:\n{descricao}",
+            choices=["Corte manual", "Corte laser"],
             default="Corte manual"
         ).execute()
         respostas[chave] = {
