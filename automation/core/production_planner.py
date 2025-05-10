@@ -236,8 +236,9 @@ def _processar_setor(
             dias_necessarios = 1  # Se não há limite, assume que tudo pode ser feito em um dia
         
         # Limita o número de dias buscados por vez para evitar carregar toda a tabela
-        dias_por_iteracao = min(dias_necessarios, 30)  # Busca no máximo 30 dias por vez
-        
+        # dias_por_iteracao = min(dias_necessarios, 30)  # Busca no máximo 30 dias por vez
+        dias_por_iteracao = 90  # Busca no máximo 30 dias por vez
+
         # Obtém os próximos dias úteis necessários
         dias_uteis = obter_proximos_dias_uteis(data_atual, dias_por_iteracao, calendario_path)
         
@@ -260,24 +261,25 @@ def _processar_setor(
             
             if col is None:
                 continue
-            
+    
 
-            
-            
             # Calcula o valor já planejado para este setor nesta data
             valor_planejado = calcular_producao_planejada(ws, setor_nome, col, linha_setor)
-            print(f"\n🔍 Depuração: Dia {dia_util.strftime('%d/%m/%Y')}, Setor: {setor_nome}")
-            print(f"  Valor já planejado: {valor_planejado}")
+            # print(f"\n🔍 Depuração: Dia {dia_util.strftime('%d/%m/%Y')}, Setor: {setor_nome}")
+            # print(f"  Produção restante: {qtd_restante}")
+
+            # print(f"  Valor já planejado: {valor_planejado}")
 
             # Calcula o limite disponível para o dia atual
             valor_limite = max(0, valor_limite_max - valor_planejado)
-            print(f"  Limite máximo diário: {valor_limite_max}")
-            print(f"  Limite disponível para o dia: {valor_limite}")
+            # print(f"  Limite máximo diário: {valor_limite_max}")
+            # print(f"  Limite disponível para o dia: {valor_limite}")
 
             # Verifica se a quantidade restante é menor que o setup
             if valor_limite < setup:
                 print(f"⚠ Limite disponivel ({valor_limite}) é menor que o setup ({setup}). Pulando para o próximo dia.")
                 delay += 1
+
                 continue
             
             # Determina quanto produzir neste dia
@@ -288,12 +290,12 @@ def _processar_setor(
             else:
                 # Para os demais setores, respeita o limite diário
                 producao_dia = min(valor_limite, qtd_restante)
-                print(f"  Quantidade restante: {qtd_restante}")
-                print(f"  Quantidade a ser produzida neste dia: {producao_dia}")
+                # print(f"  Quantidade restante: {qtd_restante}")
+                # print(f"  Quantidade a ser produzida neste dia: {producao_dia}")
 
             try:
                 ws.cell(row=linha_setor, column=col, value=producao_dia)
-                print(f"  ✔ Produção registrada: {producao_dia} unidades")
+                print(f"✔[{setor_nome}] Produção registrada: {producao_dia} unidades em {dia_util.strftime('%d/%m/%Y')}")
 
                 
                 # Registra este dia como o último usado pelo setor atual
@@ -310,7 +312,6 @@ def _processar_setor(
                 print(f"DEBUG - ERRO ao registrar produção: {e}")
             
             qtd_restante -= producao_dia
-            print(f"  Quantidade restante após registro: {qtd_restante}")
 
             
             # Se toda a quantidade foi distribuída, para
