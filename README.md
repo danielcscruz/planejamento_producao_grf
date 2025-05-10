@@ -1,75 +1,145 @@
-# 🖨️ Planejamento de Produção
+# Plano de Produção - Sistema de Gerenciamento de Pedidos
 
-Este projeto tem como objetivo auxiliar no planejamento de produção, utilizando uma planilha base personalizada e Python para processar dados do fluxo produtivo.
+Este é um sistema para gestão de planos de produção, com funcionalidades de carregamento de pedidos, definição de prioridades, validação de prazos e geração de relatórios.
 
-## 📁 Estrutura do Projeto
+## Índice
 
-- `main.py`: Script principal que executa o planejamento.
-- `requirements.txt`: Lista de dependências Python necessárias.
-- `data/`: Diretório destinado a arquivos de entrada, configurado pelo usuário.
-- `automation/`: Módulos e funções auxiliares de automação utilizadas no projeto.
-- `exp/`: Pasta que armazena os arquivos exportados pelo script
-- `.gitignore`: Arquivos e pastas ignorados pelo controle de versão.
+- [Recursos](#recursos)
+- [Requisitos do Sistema](#requisitos-do-sistema)
+- [Instalação](#instalação)
+  - [Windows](#windows)
+  - [macOS](#macos)
+- [Como Usar](#como-usar)
+- [Funcionalidades Principais](#funcionalidades-principais)
+- [Configurações](#configurações)
+- [Resolução de Problemas](#resolução-de-problemas)
 
-## ✅ Pré-requisitos
+## Recursos
 
-- **Python 3.8 ou superior**: Certifique-se de que o Python está instalado. Você pode verificar a versão com:
+- Interface de linha de comando interativa
+- Carregamento de pedidos a partir de arquivos Excel
+- Definição de tipos de corte para pedidos
+- Priorização personalizada de pedidos
+- Criação automática de planos de produção
+- Validação de prazos
+- Exportação de relatórios
+- Configurações personalizáveis
 
-  ```bash
-  python --version
+## Requisitos do Sistema
+
+- Python 3.6 ou superior
+- Acesso à linha de comando (Terminal no macOS, Prompt de Comando ou PowerShell no Windows)
+
+## Instalação
+
+### Windows
+
+1. **Instale o Python**:
+   - Baixe o instalador mais recente do Python em [python.org](https://www.python.org/downloads/windows/)
+   - Execute o instalador
+   - **IMPORTANTE**: Marque a opção "Add Python to PATH" durante a instalação
+   - Clique em "Install Now"
+
+2. **Baixe o projeto**:
+   - Baixe os arquivos do projeto para uma pasta em seu computador
+
+3. **Abra o Prompt de Comando**:
+   - Pressione `Win + R`, digite `cmd` e pressione Enter
+   - Navegue até a pasta do projeto usando o comando `cd caminho\para\o\projeto`
+
+4. **Configure o ambiente virtual** (recomendado):
+   ```cmd
+   python -m venv venv
+   venv\Scripts\activate
+   ```
+
+5. **Instale as dependências**:
+   ```cmd
+   pip install -r requirements.txt
+   ```
+
+### macOS
+
+1. **Instale o Python** (caso já não tenha):
+   - Muitos sistemas macOS já vêm com Python, mas recomenda-se a instalação da versão mais recente
+   - Usando Homebrew: `brew install python`
+   - Ou baixe o instalador em [python.org](https://www.python.org/downloads/mac-osx/)
+
+2. **Baixe o projeto**:
+   - Baixe os arquivos do projeto para uma pasta em seu computador
+
+3. **Abra o Terminal**:
+   - Abra o aplicativo Terminal
+   - Navegue até a pasta do projeto usando o comando `cd caminho/para/o/projeto`
+
+4. **Configure o ambiente virtual** (recomendado):
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+5. **Instale as dependências**:
+   ```bash
+   pip3 install -r requirements.txt
+   ```
+
+## Como Usar
+
+1. **Ative o ambiente virtual** (se estiver usando):
+   - Windows: `venv\Scripts\activate`
+   - macOS: `source venv/bin/activate`
+
+2. **Execute o programa**:
+   - Windows: `python main.py`
+   - macOS: `python3 main.py`
+
+3. **Menu Interativo**:
+   - Use as setas do teclado para navegar pelo menu
+   - Pressione Enter para selecionar uma opção
+
+## Funcionalidades Principais
+
+### 📥 Carregar Pedidos
+- Permite selecionar um arquivo Excel contendo a lista de pedidos
+- Define tipos de corte para cada pedido
+- Estabelece prioridades para processamento
+- Valida prazos e cria um plano de produção
+
+### 📊 Exportar Relatórios
+- Gera relatórios baseados em dados de produção
+- Permite escolher o arquivo para exportação
+
+### ⚙️ Configurações
+- Visualiza e altera parâmetros do sistema
+- Alterações são salvas automaticamente
+
+### 🚪 Sair
+- Encerra o programa com segurança
+
+## Configurações
+
+O sistema utiliza um arquivo de configuração (CSV com codificação UTF-16) para armazenar parâmetros. Os parâmetros podem ser:
+- Valores numéricos
+- Opções "Sim/Não"
+
+Para alterar as configurações, selecione a opção "⚙️ Configurações" no menu principal.
+
+## Resolução de Problemas
+
+**Erro ao carregar arquivo de configuração**:
+- Verifique se o arquivo de configuração existe no caminho padrão
+- Verifique se o formato do arquivo está correto (CSV com codificação UTF-16)
+
+**Erro ao carregar arquivo Excel**:
+- Certifique-se de que o formato do arquivo é compatível
+- Verifique se o arquivo não está aberto em outro programa
+
+**Falha na instalação de dependências**:
+- Windows: Certifique-se de que o Python está no PATH do sistema
+- macOS: Use `pip3` em vez de `pip` se estiver usando Python 3.x
+- Se o arquivo requirements.txt estiver ausente, instale as dependências manualmente:
+  ```
+  pip install pyfiglet tabulate InquirerPy pandas
   ```
 
-- **pip**: Gerenciador de pacotes do Python. Normalmente já vem com o Python.
-
-- **Git**: Para clonar o repositório.
-
-## 💻 Instalação
-
-### 1. Clone o repositório
-
-Abra o terminal (Mac) ou Prompt de Comando (Windows) e execute:
-
-```bash
-git clone https://github.com/danielcscruz/planejamento_producao_grf.git
-cd planejamento_producao_grf
-```
-
-### 2. Crie um ambiente virtual (opcional, mas recomendado)
-
-#### Mac/Linux:
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-#### Windows:
-
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-### 3. Instale as dependências
-
-```bash
-pip install -r requirements.txt
-```
-
-## 🚀 Execução
-
-Após instalar as dependências, execute o script principal:
-
-```bash
-python main.py
-```
-
-⚠️ Certifique-se de que a planilha de planejamento .xlsx  esteja no mesmo diretório que 'main.py', conforme esperado pelo script.
-
-## 🧪 Testes
-
-Atualmente, o projeto não possui testes automatizados. Recomenda-se a criação de testes para validar as funcionalidades à medida que o projeto evolui.
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Consulte o arquivo `LICENSE` para mais informações.
+Se os problemas persistirem, verifique os requisitos de sistema e tente reinstalar as dependências.
