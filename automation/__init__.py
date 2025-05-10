@@ -8,6 +8,7 @@ from automation.core.production_planner import preencher_producao
 # Expondo as funções de actions
 from automation.actions.action_selector import escolher_acao
 from automation.actions.add_row import adicionar_nova_linha
+from automation.actions.remove_order import excluir_pedido
 from automation.actions.create_plan import criar_novo_plano
 from automation.actions.priority_handler import definir_prioridade, definir_ordem_manual
 from automation.actions.reports_export import gerar_relatorio_arquivo
@@ -28,6 +29,7 @@ __all__ = [
     'preencher_producao',
     'escolher_acao',
     'adicionar_nova_linha',
+    'excluir_pedido',
     'criar_novo_plano',
     'definir_prioridade',
     'definir_ordem_manual',

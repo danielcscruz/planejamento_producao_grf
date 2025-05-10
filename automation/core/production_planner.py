@@ -7,8 +7,9 @@ import pandas as pd
 from openpyxl.worksheet.worksheet import Worksheet
 from InquirerPy import inquirer
 import csv
+import unicodedata
 
-from automation.core.constants import SETOR_ORDEM, DEFAULT_CALENDARIO_PATH, DEFAULT_CONFIG_PATH
+from automation.core.constants import SETOR_ORDEM, DEFAULT_CALENDARIO_PATH, DEFAULT_CONFIG_PATH, obter_valor_parametro
 from automation.core.calendar_utils import obter_proximos_dias_uteis
 from automation.core.excel_utils import encontrar_coluna_por_data, calcular_producao_planejada, obter_limite_producao
 from automation.core.file_utils import salvar_nova_versao
@@ -50,7 +51,7 @@ def preencher_producao(
         planilha_path=None, 
         workbook=None, 
         salvar: bool = True,
-        priorizar_estampa_terca_quinta: bool = None
+        priorizar_estampa: bool = None
     ):
     """
     Preenche a produção a partir do setor especificado, propagando para os demais setores na ordem.
@@ -92,15 +93,21 @@ def preencher_producao(
     primeiro_dia_usado = None
     delay = 0
     
-    # Por padrão, sempre priorizar terças e quintas para o setor Estampa
-    if priorizar_estampa_terca_quinta is None:
-        priorizar_estampa_terca_quinta = True
+    
+    priorizar_estampa_value = obter_valor_parametro('PRIORIDADE_ESTAMPA')
+    if priorizar_estampa_value == 'Sim':
+        priorizar_estampa = True
+    else:
+        priorizar_estampa = False
+    
     
     # Obtendo informações do pedido atual para referência
     pedido = ws.cell(row=linha, column=1).value
     entrega = ws.cell(row=linha, column=2).value
     cliente = ws.cell(row=linha, column=3).value
     produto = ws.cell(row=linha, column=4).value
+
+    # Atualizar limites máximos de produção
 
     
     print(f"\n--- Informações do Pedido ---")
@@ -115,7 +122,7 @@ def preencher_producao(
     for i, setor_nome in enumerate(setores_processar):
         # Verifica se o tipo de corte deve ser ignorado
         if (setor_nome == 'Corte manual' and corte == 'Corte laser') or \
-           (setor_nome == 'Corte laser' and corte == 'Corte manual'):
+            (setor_nome == 'Corte laser' and corte == 'Corte manual'):
             continue
         
         # Se não for o primeiro setor, avança para o próximo dia útil
@@ -146,69 +153,18 @@ def preencher_producao(
             resultados = _processar_setor(
                 ws, setor_nome, quantidade, linha, data_atual, 
                 calendario_path, primeiro_dia_usado, setor_ultimo_dia_usado, delay,
-                priorizar_estampa_terca_quinta=True
+                priorizar_estampa_terca_quinta=priorizar_estampa
             )
-            
             primeiro_dia_usado = resultados[0] if resultados[0] is not None else primeiro_dia_usado
             setor_ultimo_dia_usado = resultados[1]
             delay = resultados[2]
             
-
-            if isinstance(entrega, str):
-                try:
-                    data_entrega = datetime.strptime(entrega, "%d/%m/%Y")
-
-                except ValueError:
-                    data_entrega = None
-
-            if data_entrega and setor_ultimo_dia_usado:
-                
-                # Verifica se terminou pelo menos 5 dias antes da data_entrega
-                diferenca_dias = (data_entrega - setor_ultimo_dia_usado).days
-
-                print(f"Diferença em dias: {diferenca_dias}")
-                
-                delta_dias_estampa = obter_delta_dias_estampa()
-
-                if diferenca_dias is not None and diferenca_dias <= delta_dias_estampa:
-                    print(f"\nAlerta: O setor Estampa termina em {setor_ultimo_dia_usado.strftime('%d/%m/%Y')}, "
-                            f"que é {(data_entrega - setor_ultimo_dia_usado).days} dias antes do Prazo de Entrega "
-                            f"({data_entrega.strftime('%d/%m/%Y')}).")
-                    
-                    # Pergunta ao usuário se deseja refazer sem priorização
-                    refazer_sem_priorizar = inquirer.select(
-                        message="Deseja refazer o planejamento do setor Estampa sem priorizar terças e quintas?",
-                        choices=["Sim", "Não"],
-                        default="Sim"
-                    ).execute()
-
-                    
-                    if refazer_sem_priorizar == "Sim":
-                        # Limpa as células preenchidas anteriormente
-                        linha_setor = linha + SETOR_ORDEM.index(setor_nome) + 1
-                        for col in range(1, ws.max_column + 1):
-                            cell = ws.cell(row=linha_setor, column=col)
-                            if cell.value is not None:
-                                cell.value = None
-                        
-                        # Refaz o processamento sem priorização
-                        resultados = _processar_setor(
-                            ws, setor_nome, quantidade, linha, data_atual, 
-                            calendario_path, primeiro_dia_usado, None, delay,
-                            priorizar_estampa_terca_quinta=False
-                        )
-                        
-                        primeiro_dia_usado = resultados[0] if resultados[0] is not None else primeiro_dia_usado
-                        setor_ultimo_dia_usado = resultados[1]
-                        delay = resultados[2]
-            else:
-                print("Erro: Não foi possível calcular a diferença de dias. Verifique os valores de 'entrega' e 'setor_ultimo_dia_usado'.")
         else:
             # Processa o setor atual normalmente
             resultados = _processar_setor(
                 ws, setor_nome, quantidade, linha, data_atual, 
                 calendario_path, primeiro_dia_usado, setor_ultimo_dia_usado, delay,
-                priorizar_estampa_terca_quinta
+                priorizar_estampa_terca_quinta=False
             )
             
             primeiro_dia_usado = resultados[0] if resultados[0] is not None else primeiro_dia_usado
@@ -248,6 +204,20 @@ def _processar_setor(
     Returns:
         tuple: (primeiro_dia_usado, ultimo_dia_usado, delay)
     """
+    #Carregar parametro setup
+
+# Lambda function para transformar a string
+    formatar_parametro = lambda setor_nome: "MAX_" + unicodedata.normalize('NFKD', setor_nome).encode('ASCII', 'ignore').decode('ASCII').upper().replace(" ", "_")
+
+    setor_formatado = formatar_parametro(setor_nome)
+
+    valor_parametro_max = float(obter_valor_parametro(setor_formatado))
+    valor_setup = float(obter_valor_parametro('SETUP'))
+
+    setup = valor_parametro_max * valor_setup / 100
+
+    
+
     # Calcula a linha do setor atual (linha do pedido + offset do setor)
     linha_setor = linha + SETOR_ORDEM.index(setor_nome) + 1
     
@@ -291,6 +261,9 @@ def _processar_setor(
             if col is None:
                 continue
             
+
+            
+            
             # Calcula o valor já planejado para este setor nesta data
             valor_planejado = calcular_producao_planejada(ws, setor_nome, col, linha_setor)
             print(f"\n🔍 Depuração: Dia {dia_util.strftime('%d/%m/%Y')}, Setor: {setor_nome}")
@@ -300,11 +273,23 @@ def _processar_setor(
             valor_limite = max(0, valor_limite_max - valor_planejado)
             print(f"  Limite máximo diário: {valor_limite_max}")
             print(f"  Limite disponível para o dia: {valor_limite}")
+
+            # Verifica se a quantidade restante é menor que o setup
+            if valor_limite < setup:
+                print(f"⚠ Limite disponivel ({valor_limite}) é menor que o setup ({setup}). Pulando para o próximo dia.")
+                delay += 1
+                continue
             
             # Determina quanto produzir neste dia
-            producao_dia = min(valor_limite, qtd_restante)
-            print(f"  Quantidade restante: {qtd_restante}")
-            print(f"  Quantidade a ser produzida neste dia: {producao_dia}")
+            if setor_nome in ["PCP", "Separação MP"]:
+                # Para os setores "PCP" e "Separação MP", não há limite diário
+                producao_dia = qtd_restante
+                print(f"  Setor '{setor_nome}' sem limite diário. Planejando toda a quantidade restante para o dia.")
+            else:
+                # Para os demais setores, respeita o limite diário
+                producao_dia = min(valor_limite, qtd_restante)
+                print(f"  Quantidade restante: {qtd_restante}")
+                print(f"  Quantidade a ser produzida neste dia: {producao_dia}")
 
             try:
                 ws.cell(row=linha_setor, column=col, value=producao_dia)

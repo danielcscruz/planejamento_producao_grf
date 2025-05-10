@@ -11,5 +11,6 @@ def validar_data_input(data_str):
     # Verifica se a data não está no passado
     if data < datetime.today():
         raise ValueError(f"❌ A data {data_str} não pode ser no passado!")
+
     
     return data

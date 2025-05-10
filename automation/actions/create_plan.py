@@ -1,6 +1,14 @@
 from openpyxl import load_workbook
 import pandas as pd
+import os
+from tabulate import tabulate
+from InquirerPy import inquirer
+
 from automation.core.production_planner import preencher_producao  
+from automation.core.excel_utils import atualizar_limites_maximos, atualizar_celulas_limite
+from automation.core.constants import DEFAULT_CONFIG_PATH
+from automation.validators.start_date_validator import validar_data_input
+from automation.ui.sector_selector import selecionar_setor_inicio
 
 def criar_novo_plano(df_priorizado: pd.DataFrame):
     total = len(df_priorizado)
@@ -12,6 +20,53 @@ def criar_novo_plano(df_priorizado: pd.DataFrame):
     ultimo_dia_list = []
     primeiro_dia_list = []
     delay_list = []
+
+    # Gera a lista de limites máximos
+    max_list = atualizar_limites_maximos(config_path=DEFAULT_CONFIG_PATH)
+
+    # Atualiza as células [E3:E11] na planilha
+    atualizar_celulas_limite(ws, max_list)
+
+    while True:
+        try:
+            inicio_plano_str = input("\n📅 Data de Inicio do Plano (DD/MM/AAAA): ").strip()
+            inicio_plano = validar_data_input(inicio_plano_str)
+            break  # Sai do loop se a data for válida
+        except ValueError as e:
+            print(e)  # Exibe a mensagem de erro da exceção
+
+
+
+    while True:
+        escolher_setor = inquirer.select(
+            message="\nVocê deseja escolher por qual setor deseja iniciar o plano?",
+            choices=["Não - Iniciar todos por PCP [Padrão]", "Sim - Desejo escolher por qual setor irá iniciar cada produção"],
+            default="Não - Iniciar todos por PCP [Padrão]"
+        ).execute()
+        if escolher_setor == "Não - Iniciar todos por PCP [Padrão]":
+            df_priorizado["SETOR"] = "PCP"
+
+        if escolher_setor == "Sim - Desejo escolher por qual setor irá iniciar cada produção":
+            setor_lista = selecionar_setor_inicio(df_priorizado)
+
+            df_priorizado["SETOR"] = df_priorizado["PEDIDO"].map(
+                lambda pedido: setor_lista[pedido]['setor']
+            )
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print(tabulate(df_priorizado, headers='keys', tablefmt='grid', showindex=False))
+
+        # Pergunta ao usuário se deseja prosseguir ou refazer as escolhas
+        confirmar = inquirer.select(
+            message="Deseja prosseguir com essas escolhas?",
+            choices =["Sim - Prosseguir","Não - Refazer as minhas escolhas"],
+            default="Sim - Prosseguir"
+        ).execute()
+
+        if confirmar == "Sim - Prosseguir":
+            break  # Sai do loop se o usuário confirmar
+        else:
+            print("Refazendo as escolhas para os setores...\n")
+
 
 
     for index, row in df_priorizado.iterrows():
@@ -26,6 +81,7 @@ def criar_novo_plano(df_priorizado: pd.DataFrame):
         produto = row.get("PRODUTO")
         quantidade= row.get("QUANTIDADE")
         corte = row.get("TIPO DE CORTE")
+        setor=row.get("SETOR")
         
         # Preenche os dados na planilha
         ws.cell(row=linha, column=1, value=pedido)
@@ -50,11 +106,12 @@ def criar_novo_plano(df_priorizado: pd.DataFrame):
                 ws=ws, 
                 df_priorizado=df_priorizado, 
                 quantidade=quantidade, 
-                setor="PCP", 
+                setor=setor, 
                 linha=linha, 
                 calendario_path="data/_CALENDARIO.csv", 
                 planilha_path=arquivo_path, 
-                workbook=wb, 
+                workbook=wb,
+                data_inicio=inicio_plano,
                 corte=corte, 
                 salvar=salvar
             )

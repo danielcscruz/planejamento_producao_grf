@@ -1,9 +1,12 @@
 """
 Funções de utilidade para manipulação de planilhas Excel.
 """
-
+import csv
+import pandas as pd
 from datetime import datetime
 from openpyxl.worksheet.worksheet import Worksheet
+from automation.core.constants import DEFAULT_CONFIG_PATH
+
 
 def encontrar_coluna_por_data(ws: Worksheet, data):
     """
@@ -85,3 +88,73 @@ def obter_limite_producao(ws: Worksheet, linha_limite: int):
         return valor_limite_max
     except (ValueError, TypeError):
         return 0
+    
+def atualizar_limites_maximos(config_path=DEFAULT_CONFIG_PATH):
+    """
+    Obtém o valor de limites máximos do arquivo de configuração csv.
+
+    Args:
+        config_path (str): Caminho para o arquivo de configuração CSV.
+
+    Returns:
+        list: Lista de valores de limites máximos.
+    """
+    max_list = []
+    standard_list = [5000, 2000, 750, 500, 2000, 350, 500, 1000, 1000]
+    max_order_list = [
+        'MAX_PCP', 'MAX_SEPARACAO_MP', 'MAX_CORTE_MANUAL', 'MAX_IMPRESSAO',
+        'MAX_ESTAMPA', 'MAX_CORTE_LASER', 'MAX_COSTURA', 'MAX_ARREMATE', 'MAX_EMBALAGEM',
+    ]
+    try:
+        df = pd.read_csv(config_path, encoding='utf-16')
+
+        # Verifica se as colunas esperadas estão presentes
+        if 'PARAMETRO' not in df.columns or 'VALOR' not in df.columns:
+            print("⚠ Erro: Colunas 'PARAMETRO' ou 'VALOR' estão ausentes no arquivo CSV.")
+            raise ValueError("Colunas obrigatórias ausentes no arquivo CSV.")
+
+        # Cria um dicionário com os valores do arquivo
+        config_data = pd.Series(df['VALOR'].values, index=df['PARAMETRO']).to_dict()
+
+        # Itera na ordem de max_order_list e busca os valores correspondentes
+        max_list = []
+        for parametro in max_order_list:
+            if parametro in config_data:
+                try:
+                    valor = int(config_data[parametro])
+                    max_list.append(valor)
+                except ValueError:
+                    print(f"⚠ Erro ao converter o valor de '{parametro}' para inteiro. Valor encontrado: '{config_data[parametro]}'")
+                    max_list.append(standard_list[max_order_list.index(parametro)])
+            else:
+                print(f"⚠ Parâmetro '{parametro}' não encontrado no arquivo de configuração. Usando valor padrão {standard_list[max_order_list.index(parametro)]}.")
+                max_list.append(standard_list[max_order_list.index(parametro)])
+
+        return max_list
+
+    except FileNotFoundError:
+        print(f"Arquivo de configuração não encontrado: {config_path}. Usando valores padrão ({standard_list}).")
+    except ValueError as e:
+        print(f"Erro ao converter valores do arquivo de configuração: {e}. Usando valores padrão ({standard_list}).")
+    except Exception as e:
+        print(f"Erro inesperado ao carregar o arquivo de configuração: {e}. Usando valores padrão ({standard_list}).")
+    return standard_list
+
+def atualizar_celulas_limite(ws: Worksheet, max_list: list):
+    """
+    Atualiza os valores das células na faixa [E3:E11] com os valores da max_list.
+
+    Args:
+        ws (Worksheet): Planilha do openpyxl.
+        max_list (list): Lista de valores para atualizar as células.
+    """
+    # Verifica se a lista tem exatamente 9 valores (correspondente a E3:E11)
+    if len(max_list) != 9:
+        raise ValueError("A lista max_list deve conter exatamente 9 valores para atualizar as células [E3:E11].")
+
+    # Itera sobre os índices e valores da max_list
+    for i, valor in enumerate(max_list):
+        # A linha começa em 3 (E3) e vai até 11 (E11)
+        linha = 3 + i
+        coluna = 5  # Coluna E é a 5ª coluna
+        ws.cell(row=linha, column=coluna, value=valor)

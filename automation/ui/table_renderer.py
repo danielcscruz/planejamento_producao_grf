@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 from datetime import datetime
 from tabulate import tabulate
 from openpyxl import load_workbook
@@ -79,6 +80,7 @@ def processar_tabela(file_choice):
     hoje = pd.Timestamp(datetime.today().date())
     
     # Exibe o resultado
+    os.system('cls' if os.name == 'nt' else 'clear')
     df_formatado['ENTREGA'] = df_formatado['ENTREGA'].dt.strftime('%d/%m/%Y')
     print("\n✅ Dados formatados com sucesso:\n")
     print(tabulate(df_formatado, headers='keys', tablefmt='grid', showindex=False))
