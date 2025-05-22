@@ -5,7 +5,7 @@ Constantes utilizadas no sistema de planejamento de produção.
 # Ordem dos setores no processo de produção
 SETOR_ORDEM = [
     'PCP', 'Separação MP', 'Corte manual', 'Impressão',
-    'Estampa', 'Corte laser', 'Costura', 'Arremate', 'Embalagem'
+    'Estampa', 'Corte laser', 'Distribuição', 'Costura', 'Arremate', 'Embalagem'
 ]
 
 # Caminhos padrão

@@ -176,14 +176,14 @@ def preencher_producao(ws: Worksheet, quantidade: int, setor: str, linha: int,
 
         # print(f"\nDEBUG - Processando setor: {setor_nome} (índice {i})")
         
-        # print(f"\nDEBUG - Comparando corte e setor: {setor_nome} e {corte}")
-        if setor_nome == 'Corte manual' and corte == 'Corte laser':
-            # print(f"\nDEBUG - Break: {setor_nome} e {corte}")
+        print(f"\n#####DEBUG - Comparando corte e setor: {setor_nome} e {corte}")
+        print(f"\n#####DEBUG - Comparando corte e setor lower: {setor_nome.lower()} e {corte.lower()}")
+
+        if setor_nome.lower() == 'corte manual' and corte.lower() == 'laser':
             continue
-        if setor_nome == 'Corte laser' and corte == 'Corte manual':
-            # print(f"\nDEBUG - Break: {setor_nome} e {corte}")
+
+        if setor_nome.lower() == 'corte laser' and corte.lower() == 'manual':
             continue
-        
         # Se não for o primeiro setor, avança para o próximo dia útil
         if i > 0:
             # print(f"DEBUG - Processando próximo setor, avançando para o próximo dia útil")
@@ -214,19 +214,19 @@ def preencher_producao(ws: Worksheet, quantidade: int, setor: str, linha: int,
         
         # Calcula a linha do setor atual (linha do pedido + offset do setor)
         linha_setor = linha + SETOR_ORDEM.index(setor_nome) + 1
-        # print(f"DEBUG - Linha do setor {setor_nome}: {linha_setor}")
+        print(f"DEBUG - Linha do setor {setor_nome}: {linha_setor}")
         
         # Obtém o limite de produção diário para este setor
         linha_limite = SETOR_ORDEM.index(setor_nome) + 3  # +3 para corresponder à posição na planilha
         try:
             valor_limite_cell = ws.cell(row=linha_limite, column=5).value
-            # print(f"DEBUG - Célula de limite na linha {linha_limite}, coluna 5: {valor_limite_cell}")
+            print(f"DEBUG - Célula de limite na linha {linha_limite}, coluna 5: {valor_limite_cell}")
             valor_limite_max = int(valor_limite_cell) if valor_limite_cell is not None else 0
         except (ValueError, TypeError) as e:
-            # print(f"DEBUG - Erro ao converter limite: {e}")
+            print(f"DEBUG - Erro ao converter limite: {e}")
             valor_limite_max = 0
         
-        # print(f"DEBUG - >> Limite máximo diário para o setor {setor_nome}: {valor_limite_max }")
+        print(f"DEBUG - >> Limite máximo diário para o setor {setor_nome}: {valor_limite_max }")
         
         qtd_restante = quantidade
         
@@ -269,10 +269,11 @@ def preencher_producao(ws: Worksheet, quantidade: int, setor: str, linha: int,
                     cell_value = ws.cell(row=row, column=col).value
                     setor_cell_value = ws.cell(row=row, column=7).value  # Coluna G é a 7ª coluna
                     if setor_cell_value == setor_nome:
+                        print(f"DEBUG - >>>>Valor planejado: {valor_planejado}")
                         valor_planejado += int(cell_value or 0)  # Calculate the sum of the values
             
-                # print(f"DEBUG - >>>>Soma calculada para valor_planejado: {valor_planejado}")
-                # print(f"DEBUG - >> Valor já planejado até a linha {linha_setor}, coluna {col}: {valor_planejado}")
+                print(f"DEBUG - >>>>Soma calculada para valor_planejado: {valor_planejado}")
+                print(f"DEBUG - >> Valor já planejado até a linha {linha_setor}, coluna {col}: {valor_planejado}")
 
                 # Calcula o limite disponível para o dia atual
                 valor_limite = max(0, valor_limite_max - valor_planejado)

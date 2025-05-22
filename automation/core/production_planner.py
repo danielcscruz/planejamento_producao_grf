@@ -80,6 +80,7 @@ def preencher_producao(
     # Determina o índice do setor inicial na ordem de processamento
     setor_idx = SETOR_ORDEM.index(setor)
     setores_processar = SETOR_ORDEM[setor_idx:]
+    print(f"DEBUG - setor_idx: {setor_idx} | setores_processar: {setores_processar}")
     
     # Se data_inicio não for fornecida, usa a data atual
     if data_inicio is None:
@@ -111,7 +112,9 @@ def preencher_producao(
 
     
     print(f"\n--- Informações do Pedido ---")
+    print(f"Linha: {linha}")
     print(f"Pedido: {pedido}")
+    print(f"Pedido: {entrega}")
     print(f"Cliente: {cliente}")
     print(f"Produto: {produto}")
     print(f"Quantidade: {quantidade}")
@@ -121,8 +124,8 @@ def preencher_producao(
     # Processa cada setor na ordem
     for i, setor_nome in enumerate(setores_processar):
         # Verifica se o tipo de corte deve ser ignorado
-        if (setor_nome == 'Corte manual' and corte == 'Corte laser') or \
-            (setor_nome == 'Corte laser' and corte == 'Corte manual'):
+        if (setor_nome == 'Corte manual' and corte.lower() == 'laser') or \
+            (setor_nome == 'Corte laser' and corte.lower() == 'manual'):
             continue
         
         # Se não for o primeiro setor, avança para o próximo dia útil

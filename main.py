@@ -105,16 +105,6 @@ def main():
 
             df_formatado, _ = processar_tabela(arquivo)
 
-            tipos_corte = selecionar_tipos_de_corte(df_formatado)
-
-            # Atribuir tipo de corte por PEDIDO
-            df_formatado["TIPO DE CORTE"] = df_formatado["PEDIDO"].map(
-                lambda pedido: tipos_corte[pedido]["tipo"]
-            )
-            os.system('cls' if os.name == 'nt' else 'clear')
-            print("\n🪚 Tabela com tipo de corte definido:\n")
-            print(tabulate(df_formatado, headers='keys', tablefmt='grid', showindex=False))
-
             while True:
                 df_priorizado = definir_prioridade(df_formatado)
                 os.system('cls' if os.name == 'nt' else 'clear')
@@ -133,8 +123,9 @@ def main():
                 elif confirmacao == "Reorganizar":
                     print("\n🔄 Reorganizando a tabela...\n")
 
-            df_produzido = criar_novo_plano(df_priorizado)
+            df_produzido, carga = criar_novo_plano(df_priorizado)
             print("\n🗓️  Novo Plano Criado\n")
+            print(f"\n Carga: {carga} %")
             print("\n📊  Relatório:\n")
             df_validado = validar_prazo(df_produzido)
             print(tabulate(df_validado, headers='keys', tablefmt='grid', showindex=False))

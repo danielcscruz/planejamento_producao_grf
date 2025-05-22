@@ -63,7 +63,7 @@ def calcular_producao_planejada(ws: Worksheet, setor_nome: str, coluna: int, lin
         int: Soma da produção planejada para o setor na data.
     """
     valor_planejado = 0
-    for row in range(12, linha_limite):
+    for row in range(13, linha_limite):
         setor_cell_value = ws.cell(row=row, column=7).value  # Coluna G é a 7ª coluna
         if setor_cell_value == setor_nome:
             cell_value = ws.cell(row=row, column=coluna).value
@@ -88,7 +88,33 @@ def obter_limite_producao(ws: Worksheet, linha_limite: int):
         return valor_limite_max
     except (ValueError, TypeError):
         return 0
+
+def obter_carga_producao(config_path=DEFAULT_CONFIG_PATH):
     
+    try:
+        df = pd.read_csv(config_path, encoding='utf-16')
+
+        # Verifica se as colunas esperadas estão presentes
+        if 'PARAMETRO' not in df.columns or 'VALOR' not in df.columns:
+            print("⚠ Erro: Colunas 'PARAMETRO' ou 'VALOR' estão ausentes no arquivo CSV.")
+            raise ValueError("Colunas obrigatórias ausentes no arquivo CSV.")
+        
+        config_data = pd.Series(df['VALOR'].values, index=df['PARAMETRO']).to_dict()
+
+        if "CARGA" in config_data:
+            return int(config_data['CARGA'])
+        else:
+            return 100
+        
+    except FileNotFoundError:
+        print(f"Arquivo de configuração não encontrado: {config_path}. Usando valores padrão 100%")
+    except ValueError as e:
+        print(f"Erro ao converter valores do arquivo de configuração: {e}. Usando valores padrão 100%")
+    except Exception as e:
+        print(f"Erro inesperado ao carregar o arquivo de configuração: {e}. Usando valores padrão 100%")
+    return 100
+
+
 def atualizar_limites_maximos(config_path=DEFAULT_CONFIG_PATH):
     """
     Obtém o valor de limites máximos do arquivo de configuração csv.
@@ -100,10 +126,10 @@ def atualizar_limites_maximos(config_path=DEFAULT_CONFIG_PATH):
         list: Lista de valores de limites máximos.
     """
     max_list = []
-    standard_list = [5000, 2000, 750, 500, 2000, 350, 500, 1000, 1000]
+    standard_list = [5000, 2000, 750, 500, 2000, 350, 800, 500, 1000, 1000]
     max_order_list = [
         'MAX_PCP', 'MAX_SEPARACAO_MP', 'MAX_CORTE_MANUAL', 'MAX_IMPRESSAO',
-        'MAX_ESTAMPA', 'MAX_CORTE_LASER', 'MAX_COSTURA', 'MAX_ARREMATE', 'MAX_EMBALAGEM',
+        'MAX_ESTAMPA', 'MAX_CORTE_LASER','MAX_DISTRIBUICAO', 'MAX_COSTURA', 'MAX_ARREMATE', 'MAX_EMBALAGEM',
     ]
     try:
         df = pd.read_csv(config_path, encoding='utf-16')
@@ -149,12 +175,12 @@ def atualizar_celulas_limite(ws: Worksheet, max_list: list):
         max_list (list): Lista de valores para atualizar as células.
     """
     # Verifica se a lista tem exatamente 9 valores (correspondente a E3:E11)
-    if len(max_list) != 9:
-        raise ValueError("A lista max_list deve conter exatamente 9 valores para atualizar as células [E3:E11].")
+    if len(max_list) != 10:
+        raise ValueError("A lista max_list deve conter exatamente 10 valores para atualizar as células [E3:E11].")
 
     # Itera sobre os índices e valores da max_list
     for i, valor in enumerate(max_list):
-        # A linha começa em 3 (E3) e vai até 11 (E11)
+        # A linha começa em 3 (E3) e vai até 12 (E12)
         linha = 3 + i
         coluna = 5  # Coluna E é a 5ª coluna
         ws.cell(row=linha, column=coluna, value=valor)
