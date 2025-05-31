@@ -35,7 +35,15 @@ def processar_tabela(file_choice):
     df_formatado = df_unique[colunas_desejadas].copy()
     df_formatado.columns = ['PEDIDO', 'ENTREGA', 'CLIENTE', 'PRODUTO', 'QUANTIDADE', 'CORTE', 'INICIO', 'SETOR']
     
-    df_formatado['PEDIDO'] = df_formatado['PEDIDO'].astype(str).str.strip().str.replace('.0$', '', regex=True)
+    # Corrigindo a formatação do PEDIDO - remove apenas decimais desnecessários
+    def limpar_pedido(valor):
+        valor_str = str(valor).strip()
+        # Remove apenas se terminar com .0 ou .00 (decimais desnecessários)
+        # Usa regex mais específica que só remove ponto seguido de zeros no final
+        import re
+        return re.sub(r'\.0+$', '', valor_str)
+    
+    df_formatado['PEDIDO'] = df_formatado['PEDIDO'].apply(limpar_pedido)
 
     # Validação de datas (ENTREGA e DATA)
     for col in ['ENTREGA', 'INICIO']:
@@ -64,7 +72,8 @@ def processar_tabela(file_choice):
     df_formatado = df_unique[colunas_desejadas].copy()
     df_formatado.columns = ['PEDIDO', 'ENTREGA', 'CLIENTE', 'PRODUTO', 'QUANTIDADE', 'CORTE', 'INICIO', 'SETOR']
     
-    df_formatado['PEDIDO'] = df_formatado['PEDIDO'].astype(str).str.strip().str.replace('.0$', '', regex=True)
+    # Aplica a mesma correção após recarregar
+    df_formatado['PEDIDO'] = df_formatado['PEDIDO'].apply(limpar_pedido)
 
     # Converte colunas de data
     df_formatado['ENTREGA'] = pd.to_datetime(df_formatado['ENTREGA'], errors='coerce')
